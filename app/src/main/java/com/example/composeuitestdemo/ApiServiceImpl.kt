@@ -7,7 +7,7 @@ object ApiServiceImpl: ApiService {
     private val PASSWORD = "password"
 
     override suspend fun login(username: String, password: String): NetworkReturnResult<LoginResult<*>> {
-        return when (validCredentials(username, password)) {
+        val result =  when (validCredentials(username, password)) {
             // 用户名错误响应数据
             MockLoginResult.UsernameError -> {
                 NetworkReturnResult(
@@ -45,6 +45,8 @@ object ApiServiceImpl: ApiService {
                 )
             }
         }
+
+        return result
     }
 
     enum class MockLoginResult{

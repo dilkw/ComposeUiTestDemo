@@ -1,5 +1,6 @@
 package com.example.composeuitestdemo
 
+import android.util.Log
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsEnabled
@@ -10,17 +11,26 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.mockk.coEvery
-import io.mockk.junit4.MockKRule
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(AndroidJUnit4::class)
 class LoginScreenKtTest {
@@ -36,6 +46,7 @@ class LoginScreenKtTest {
     private lateinit var passwordField: SemanticsNodeInteraction
     private lateinit var loginButton: SemanticsNodeInteraction
     private lateinit var errorText: SemanticsNodeInteraction
+    private lateinit var loginLoading: SemanticsNodeInteraction
 
     private val USERNAME = "username"
     private val PASSWORD = "password"
@@ -47,12 +58,46 @@ class LoginScreenKtTest {
     @Before
     fun loadScreen() {
         mockkObject(ApiServiceImpl)
-        loginRepository = LoginRepository(apiService = ApiServiceImpl)
-        loginViewModel = LoginViewModel(loginRepository = loginRepository)
+    }
+
+    @After
+    fun after() {
+        unmockkAll()
+    }
+
+    @Test
+    fun testLoginButtonLogin() = runTest(timeout = 65.seconds) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        loginRepository = LoginRepository(defaultDispatcher = dispatcher, apiService = ApiServiceImpl)
+        loginViewModel = LoginViewModel(defaultDispatcher = dispatcher, loginRepository = loginRepository)
+
+        // 初始化页面
+        composeTestRule.setContent {
+            LoginScreen(
+                modifier = Modifier,
+                loginViewModel = loginViewModel,
+                loginSuccess = loginSuccess
+            )
+        }
+        // 通过在 composable 中的 modifier 设置 testTag 属性
+        loginField = composeTestRule.onNodeWithTag("loginUsernameTextField")
+        passwordField = composeTestRule.onNodeWithTag("loginPasswordTextField")
+        loginButton = composeTestRule.onNodeWithTag("loginLoginButton")
+        errorText = composeTestRule.onNodeWithTag("loginErrorText")
+        loginLoading = composeTestRule.onNodeWithTag("loginLoading")
+
+        loginField.performTextClearance()
+        passwordField.performTextClearance()
+        loginField.performTextInput("username")
+        passwordField.performTextInput("password")
+        loginButton.assertIsEnabled()
+        loginButton.performClick()
+
         //定义条件和满足条件的返回值
         coEvery {
             ApiServiceImpl.login(capture(username), capture(password))
-        } coAnswers   {
+        } coAnswers {
+            delay(4000)
             when (validCredentials(username.captured, password.captured)) {
                 // 用户名错误响应数据
                 MockLoginResult.UsernameError -> {
@@ -92,44 +137,14 @@ class LoginScreenKtTest {
                 }
             }
         }
-
-        // 初始化页面
-        composeTestRule.setContent {
-            LoginScreen(
-                modifier = Modifier,
-                loginViewModel = loginViewModel,
-                loginSuccess = loginSuccess
-            )
-        }
-        // 通过在 composable 中的 modifier 设置 testTag 属性
-        loginField = composeTestRule.onNodeWithTag("loginUsernameTextField")
-        passwordField = composeTestRule.onNodeWithTag("loginPasswordTextField")
-        loginButton = composeTestRule.onNodeWithTag("loginLoginButton")
-        errorText = composeTestRule.onNodeWithTag("loginErrorText")
-    }
-
-    @After
-    fun after() {
-        unmockkAll()
-    }
-
-    @Test
-    fun testLoginButtonLogin() {
-        // 初始化页面
-        loginField.performTextClearance()
-        passwordField.performTextClearance()
-        loginField.performTextInput("username")
-        passwordField.performTextInput("password")
-        loginButton.assertIsEnabled()
-        loginButton.performClick()
-        Thread.sleep(5000)
-        assert(loginViewModel.loginUiEvent.value is LoginUiEvent.Success)
-        composeTestRule.onNodeWithTag("login_errorText").assertDoesNotExist()
-        verify(exactly = 1) {
+        Log.d("TAG", "testLoginButtonLogin111: ")
+        // 等待 IdlingResource 变为空闲状态
+        composeTestRule.awaitIdle()
+        verify(exactly = 1, timeout = 60000) {
             loginSuccess()
         }
+        composeTestRule.waitForIdle()
     }
-
 
     enum class MockLoginResult{
         UsernameError,

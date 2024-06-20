@@ -1,21 +1,27 @@
 package com.example.composeuitestdemo
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.christelle.mrppda.helper.DataStoreHelper
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
+    val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val loginRepository: LoginRepository = LoginRepository()
-) : ViewModel() {
+) : BaseViewModel(defaultDispatcher) {
     //private val loginRepository = LoginRepository(defaultRepositoryDispatcher)
     // 初始化为LoginUiState.Init状态
     private val _loginUiEvent = MutableStateFlow<LoginUiEvent>(LoginUiEvent.Init)
@@ -44,27 +50,36 @@ class LoginViewModel(
     }
 
     private var job: Job? = null
-    fun login() {
-        job = viewModelScope.launch() {
-            ensureActive()
+    private fun login() {
+        job = launchCoroutine {
             loginRepository.login(_loginUiState.username, _loginUiState.password).collect {
                 var errorMsg = ""
                 when(it) {
                     is NetworkState.Success<*> -> {
                         val networkReturnResult = (it as NetworkState.Success).data
-                        _loginUiEvent.value = if (networkReturnResult.success && it.data.data != null) {
-                            LoginUiEvent.Success
-                        } else {
-                            LoginUiEvent.Error(it.data.message)
+                        if (networkReturnResult.success && it.data.data != null) {
+                            DataStoreHelper.saveLoginState(true, it.data.data.username)
+                            Log.d("TAG", "login:3 ")
+                            _loginUiEvent.update {
+                                LoginUiEvent.Success
+                            }
+                        }else {
+                            _loginUiEvent.update { data ->
+                                LoginUiEvent.Error(it.data.message)
+                            }
                         }
                         errorMsg = if (!networkReturnResult.success) networkReturnResult.message else errorMsg
                     }
                     is NetworkState.Error -> {
-                        _loginUiEvent.value = LoginUiEvent.Error(errorMsg = if (it.e.message == null) "" else it.e.message!!)
+                        _loginUiEvent.update { data ->
+                            LoginUiEvent.Error(errorMsg = if (it.e.message == null) "" else it.e.message!!)
+                        }
                         errorMsg = if (it.e.message != null) it.e.message!! else errorMsg
                     }
                     is NetworkState.Loading -> {
-                        _loginUiEvent.value = LoginUiEvent.Loading
+                        _loginUiEvent.update {
+                            LoginUiEvent.Loading
+                        }
                     }
                     else -> {
                         return@collect
@@ -123,8 +138,8 @@ class LoginViewModel(
 }
 
 data class LoginUiState(
-    val username: String = "",
-    val password: String = "",
+    val username: String = "username",
+    val password: String = "password",
     val loginButtonEnable: Boolean = username.isNotEmpty() && password.isNotEmpty(),
     val isShowLoading: Boolean = false,
     val isError: Boolean = false,

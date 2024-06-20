@@ -23,6 +23,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- https://developer.android.google.cn/topic/libraries/app-startup?hl=zh-cn -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data  android:name="com.christelle.mrppda.helper.DataStoreInitializer"
+                android:value="androidx.startup" />
+        </provider>
+
     </application>
 
 </manifest>

@@ -17,15 +17,15 @@ class LoginRepository(private val defaultDispatcher: CoroutineDispatcher = Dispa
      * @return 登录信息，以Flow格式返回
      */
     suspend fun login(username: String, password: String): Flow<NetworkState<NetworkReturnResult<LoginResult<*>>>> = flow {
-        emit(NetworkState.INIT)
+        emit(NetworkState.Loading)
+        //val returnResult: NetworkReturnResult<LoginResult<*>> = apiService.login(username = username, password = password)
         val returnResult: NetworkReturnResult<LoginResult<*>> = withContext(defaultDispatcher) {
-            return@withContext apiService.login(username = username, password = password)
+            return@withContext apiService.login(username, password)
         }
-        kotlinx.coroutines.delay(3000)
         emit(NetworkState.Success(returnResult))
     }.onStart {
-        emit(NetworkState.Loading)
+        emit(NetworkState.INIT)
     }.catch {
         emit(NetworkState.Error(it))
-    }.flowOn(defaultDispatcher)
+    }
 }

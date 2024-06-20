@@ -1,5 +1,6 @@
 package com.example.composeuitestdemo
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,8 +36,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun LoginScreen(
@@ -45,16 +51,25 @@ fun LoginScreen(
 
     val loginUiEvent by loginViewModel.loginUiEvent.collectAsState()
     val context = LocalContext.current
-    when (loginUiEvent) {
-        is LoginUiEvent.Success -> {
-            loginSuccess()
-            Toast.makeText(context, "login success", Toast.LENGTH_SHORT).show()
+    LaunchedEffect(loginUiEvent) {
+        when (loginUiEvent) {
+            is LoginUiEvent.Success -> {
+                loginSuccess()
+                Log.d("TAG", "LoginScreen: loginSuccess()${loginUiEvent.hashCode()}")
+                Toast.makeText(context, "login success", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
         }
-        else -> {}
+
+        loginViewModel.loginUiEvent.collect {
+            Log.d("TAG", "LoginScreen collect: $it")
+        }
     }
+
     Surface(
         modifier = Modifier.fillMaxSize()
     ) {
+        Log.d("TAG", "LoginScreen: Surface")
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -72,6 +87,9 @@ fun LoginScreen(
             TextField(
                 modifier = Modifier.testTag("loginPasswordTextField"),
                 value = loginViewModel.loginUiState.password,
+                keyboardActions = KeyboardActions(
+                    onDone = { loginViewModel.pwdSubmitCheck { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() } }
+                ),
                 onValueChange = loginViewModel.loginPasswordTextOnChangeListener
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -89,9 +107,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             Button(
-                onClick = {
-                    loginViewModel.login()
-                },
+                onClick = loginViewModel.loginButtonOnClick,
                 modifier = Modifier
                     .testTag("loginLoginButton")
                     .fillMaxWidth()
@@ -108,6 +124,7 @@ fun LoginScreen(
     if (loginViewModel.loginUiState.isShowLoading) {
         Surface(
             modifier = Modifier
+                .testTag("loginLoading")
                 .fillMaxSize()
                 .alpha(0.5f),
         ) {
