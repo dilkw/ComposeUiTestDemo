@@ -19,10 +19,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
-    val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val loginRepository: LoginRepository = LoginRepository()
 ) : BaseViewModel(defaultDispatcher) {
-    //private val loginRepository = LoginRepository(defaultRepositoryDispatcher)
     // 初始化为LoginUiState.Init状态
     private val _loginUiEvent = MutableStateFlow<LoginUiEvent>(LoginUiEvent.Init)
     private var _loginUiState by mutableStateOf(LoginUiState())

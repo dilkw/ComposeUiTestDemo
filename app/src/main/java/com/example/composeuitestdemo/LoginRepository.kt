@@ -18,7 +18,6 @@ class LoginRepository(private val defaultDispatcher: CoroutineDispatcher = Dispa
      */
     suspend fun login(username: String, password: String): Flow<NetworkState<NetworkReturnResult<LoginResult<*>>>> = flow {
         emit(NetworkState.Loading)
-        //val returnResult: NetworkReturnResult<LoginResult<*>> = apiService.login(username = username, password = password)
         val returnResult: NetworkReturnResult<LoginResult<*>> = withContext(defaultDispatcher) {
             return@withContext apiService.login(username, password)
         }
@@ -27,5 +26,5 @@ class LoginRepository(private val defaultDispatcher: CoroutineDispatcher = Dispa
         emit(NetworkState.INIT)
     }.catch {
         emit(NetworkState.Error(it))
-    }
+    }.flowOn(defaultDispatcher)
 }

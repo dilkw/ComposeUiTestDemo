@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +34,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,12 +83,15 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(50.dp))
             TextField(
                 modifier = Modifier.testTag("loginUsernameTextField"),
+                singleLine = true,
                 value = loginViewModel.loginUiState.username,
                 onValueChange = loginViewModel.loginUsernameTextOnChangeListener
             )
             TextField(
                 modifier = Modifier.testTag("loginPasswordTextField"),
                 value = loginViewModel.loginUiState.password,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = { loginViewModel.pwdSubmitCheck { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() } }
                 ),

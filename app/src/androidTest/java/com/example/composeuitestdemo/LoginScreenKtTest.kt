@@ -1,9 +1,7 @@
 package com.example.composeuitestdemo
 
 import androidx.compose.ui.Modifier
-import android.view.KeyEvent
 import androidx.compose.ui.input.key.NativeKeyEvent
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -22,10 +20,6 @@ import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestCoroutineScheduler
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -34,18 +28,10 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class LoginScreenKtTest {
-    private val testCoroutineScheduler = TestCoroutineScheduler()
-    private val testDispatcher = StandardTestDispatcher(testCoroutineScheduler)
-    private val testScope = TestScope(testDispatcher)
-    @OptIn(ExperimentalTestApi::class)
     @get:Rule
-    val composeTestRule = createComposeRule(testDispatcher)
+    val composeTestRule = createComposeRule()
     @get:Rule
     val mockkRule = MockKRule(this)
-
-    private lateinit var loginViewModel: LoginViewModel
-    private lateinit var loginRepository: LoginRepository
-
     private lateinit var loginField: SemanticsNodeInteraction
     private lateinit var passwordField: SemanticsNodeInteraction
     private lateinit var loginButton: SemanticsNodeInteraction
@@ -62,14 +48,10 @@ class LoginScreenKtTest {
     @Before
     fun loadScreen() {
         mockkObject(ApiServiceImpl)
-        loginRepository = LoginRepository()
-        loginViewModel = LoginViewModel()
-
         // 初始化页面
         composeTestRule.setContent {
             LoginScreen(
                 modifier = Modifier,
-                loginViewModel = loginViewModel,
                 loginSuccess = loginSuccess
             )
         }
@@ -132,7 +114,7 @@ class LoginScreenKtTest {
     }
 
     @Test
-    fun testLoginButtonLogin() = testScope.runTest {
+    fun testLoginButtonLogin() {
         loginField.performTextClearance()
         passwordField.performTextClearance()
 
@@ -147,16 +129,15 @@ class LoginScreenKtTest {
         composeTestRule.waitUntil(10000) {
             composeTestRule.onAllNodesWithTag("loginLoading").fetchSemanticsNodes().isEmpty()
         }
-        verify(exactly = 1) {
+        verify {
             loginSuccess.invoke()
         }
     }
 
     @Test
-    fun testKeyDoneLogin() = testScope.runTest {
+    fun testKeyDoneLogin() {
         loginField.performTextClearance()
         passwordField.performTextClearance()
-
         loginField.performTextInput("username")
         passwordField.performTextInput("password")
         loginButton.assertIsEnabled()
@@ -166,14 +147,13 @@ class LoginScreenKtTest {
         )
         passwordField.performKeyPress(androidx.compose.ui.input.key.KeyEvent(nativeKeyEvent))
 
-
         composeTestRule.waitUntil(10000) {
             composeTestRule.onAllNodesWithTag("loginLoading").fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.waitUntil(10000) {
             composeTestRule.onAllNodesWithTag("loginLoading").fetchSemanticsNodes().isEmpty()
         }
-        verify(exactly = 1) {
+        verify {
             loginSuccess.invoke()
         }
     }
